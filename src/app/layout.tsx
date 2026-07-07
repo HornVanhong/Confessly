@@ -48,7 +48,7 @@ export default function RootLayout({
               <div className="flex items-center gap-1 text-slate-500 text-sm">
                 <span>Made with</span>
                 <Heart className="h-3.5 w-3.5 text-pink-500 fill-pink-500" />
-                <span>for a safe sharing space.</span>
+                <span>by Horn Vanhong.</span>
               </div>
             </div>
           </footer>
