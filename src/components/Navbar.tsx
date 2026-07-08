@@ -54,7 +54,7 @@ export const Navbar = () => {
         <button
           type="button"
           onClick={() => {
-            window.location.assign(`/moderator?nav=${Date.now()}`);
+            window.location.assign(`/moderator?login=true&nav=${Date.now()}`);
           }}
           className="md:hidden flex items-center gap-2 group select-none text-left"
           aria-label="Open moderator panel"

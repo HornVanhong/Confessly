@@ -94,9 +94,10 @@ export default function AdminDashboard() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('login') === 'true' || params.get('admin') === 'true') {
         setShowLogin(true);
+        setIsAdmin(true);
       }
     }
-  }, []);
+  }, [setIsAdmin]);
   /* eslint-enable react-hooks/set-state-in-effect */
   
   // Facebook states
