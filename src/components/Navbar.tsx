@@ -51,14 +51,21 @@ export const Navbar = () => {
         </div>
 
         {/* Mobile logo opens the moderator page directly */}
-        <Link href="/moderator" className="md:hidden flex items-center gap-2 group select-none">
+        <button
+          type="button"
+          onClick={() => {
+            window.location.assign(`/moderator?nav=${Date.now()}`);
+          }}
+          className="md:hidden flex items-center gap-2 group select-none text-left"
+          aria-label="Open moderator panel"
+        >
           <div className="bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-2 rounded-xl shadow-lg shadow-indigo-500/25 group-active:scale-95 transition-transform duration-200">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight text-white">
             Confessly
           </span>
-        </Link>
+        </button>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-2">
