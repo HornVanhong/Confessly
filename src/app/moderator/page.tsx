@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { notFound } from 'next/navigation';
 import { useConfessions } from '@/context/ConfessionContext';
 import { 
   BarChart3, Clock, CheckCircle, AlertTriangle, 
@@ -83,6 +84,20 @@ export default function AdminDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [passcode, setPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('login') === 'true' || params.get('admin') === 'true') {
+        setShowLogin(true);
+      }
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   
   // Facebook states
   const [showToken, setShowToken] = useState(false);
@@ -328,6 +343,14 @@ export default function AdminDashboard() {
       }
     });
   };
+
+  if (!mounted) {
+    return null;
+  }
+
+  if (!isAdmin && !showLogin) {
+    return notFound();
+  }
 
   if (!isAdmin) {
     return (
