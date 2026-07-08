@@ -11,7 +11,13 @@ export async function PATCH(
     const { status, facebookPostId, reactionType, incrementReports, clearReports } = body;
 
     if (status) {
-      if (facebookPostId) {
+      const clearFacebook = body.clearFacebook === true;
+      if (clearFacebook) {
+        await dbQuery(
+          'UPDATE confessions SET status = ?, facebookPostId = NULL WHERE id = ?',
+          [status, id]
+        );
+      } else if (facebookPostId) {
         await dbQuery(
           'UPDATE confessions SET status = ?, facebookPostId = ? WHERE id = ?',
           [status, facebookPostId, id]

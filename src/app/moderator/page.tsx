@@ -76,7 +76,7 @@ const getFacebookPublishToken = async (pageId: string, accessToken: string) => {
 export default function AdminDashboard() {
   const { 
     confessions, approveConfession, rejectConfession, 
-    deleteConfession, clearReports, isAdmin, setIsAdmin,
+    deleteConfession, resetConfessionToPending, clearReports, isAdmin, setIsAdmin,
     facebookConfig, updateFacebookConfig
   } = useConfessions();
 
@@ -106,6 +106,10 @@ export default function AdminDashboard() {
 
   const reportedConfessions = useMemo(() => {
     return confessions.filter((c) => c.reportsCount > 0);
+  }, [confessions]);
+
+  const moderatedConfessions = useMemo(() => {
+    return confessions.filter((c) => c.status === 'approved' || c.status === 'rejected');
   }, [confessions]);
 
   const toggleExpand = (id: string) => {
@@ -259,6 +263,34 @@ export default function AdminDashboard() {
         });
         setTimeout(() => setToast(null), 3000);
       }
+    }
+  };
+
+  const handleMoveToPending = async (confession: Confession) => {
+    if (confirm("Move this confession back to Pending Review? (If posted to Facebook, it will be removed from your Page)")) {
+      if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
+        setPublishingId(confession.id);
+        setToast(null);
+        try {
+          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${facebookConfig.accessToken}`, {
+            method: 'DELETE'
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            console.warn("Facebook API warnings during removal:", data.error?.message);
+          }
+        } catch (err: unknown) {
+          console.error("Facebook delete error during status reset:", err);
+        } finally {
+          setPublishingId(null);
+        }
+      }
+      resetConfessionToPending(confession.id);
+      setToast({
+        type: 'success',
+        message: 'Moved back to Pending Review queue!'
+      });
+      setTimeout(() => setToast(null), 4000);
     }
   };
 
@@ -512,14 +544,14 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Main Moderation Split Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+      {/* Main Moderation Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
         
         {/* Pending Reviews Section */}
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-3">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>Pending Review Queue</span>
+              <span>Pending Review</span>
               <span className="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full">
                 {pendingConfessions.length}
               </span>
@@ -612,6 +644,116 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Moderated History Section */}
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span>Moderated History</span>
+              <span className="text-xs bg-slate-800 border border-white/5 text-slate-300 font-semibold px-2 py-0.5 rounded-full">
+                {moderatedConfessions.length}
+              </span>
+            </h2>
+          </div>
+
+          <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-1">
+            <AnimatePresence mode="popLayout">
+              {moderatedConfessions.length > 0 ? (
+                moderatedConfessions.map((c) => (
+                  <motion.div
+                    key={c.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className={`glass p-5 rounded-2xl border flex flex-col gap-4 hover:border-white/10 transition-colors shadow-sm ${
+                      c.status === 'approved' ? 'border-emerald-500/10' : 'border-rose-500/10'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-slate-800 border border-white/5 px-2.5 py-1 rounded-full text-slate-300 font-medium">
+                          {c.category}
+                        </span>
+                        <span className="text-xs text-slate-500">@{c.nickname}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-extrabold uppercase ${
+                          c.status === 'approved' 
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }`}>
+                          {c.status}
+                        </span>
+                        <span className="text-[11px] text-slate-500">{formatTime(c.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="text-slate-200 text-sm leading-relaxed font-light break-words">
+                      {expandedId === c.id ? c.content : (
+                        c.content.length > 120 ? `${c.content.substring(0, 120)}...` : c.content
+                      )}
+                      {c.content.length > 120 && (
+                        <button
+                          onClick={() => toggleExpand(c.id)}
+                          className="text-xs font-semibold text-indigo-400 ml-1.5 hover:text-indigo-300 transition-colors"
+                        >
+                          {expandedId === c.id ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
+                    </div>
+
+                    {c.image && (
+                      <div className="relative mt-2 rounded-xl overflow-hidden border border-white/5 bg-slate-950/40 w-fit max-w-full">
+                        <img src={c.image} alt="Moderated preview" className="max-h-[100px] object-contain rounded-xl" />
+                      </div>
+                    )}
+
+                    {/* Controls */}
+                    <div className="flex items-center justify-end gap-2 border-t border-white/5 pt-3 mt-1">
+                      <button
+                        onClick={() => handleMoveToPending(c)}
+                        disabled={publishingId === c.id}
+                        className="px-2.5 py-1.5 bg-slate-850 hover:bg-slate-800 border border-white/5 text-slate-300 rounded-xl text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Move back to Pending Review queue"
+                      >
+                        {publishingId === c.id ? (
+                          <>
+                            <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                            <span>Updating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-3 w-3 text-indigo-400" />
+                            <span>Move to Pending</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDelete(c)}
+                        disabled={publishingId === c.id}
+                        className="px-2.5 py-1.5 bg-red-650 hover:bg-red-750 text-white rounded-xl text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Permanently delete from system"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="glass p-12 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center gap-2">
+                  <Clock className="h-6 w-6 text-slate-600" />
+                  <p className="text-slate-500 text-sm font-light">No moderated history yet.</p>
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
         {/* Reported / Content Flagged Section */}
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-3">
@@ -684,7 +826,7 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleDelete(c)}
                         disabled={publishingId === c.id}
-                        className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3.5 py-2 bg-red-650 hover:bg-red-750 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Permanently delete from system"
                       >
                         {publishingId === c.id ? (

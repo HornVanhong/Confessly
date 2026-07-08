@@ -25,6 +25,7 @@ interface ConfessionContextType {
   approveConfession: (confessionId: string, facebookPostId?: string) => void;
   rejectConfession: (confessionId: string) => void;
   deleteConfession: (confessionId: string) => void;
+  resetConfessionToPending: (confessionId: string) => void;
   reportConfession: (confessionId: string) => void;
   clearReports: (confessionId: string) => void;
   isAdmin: boolean;
@@ -280,6 +281,23 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
+  const resetConfessionToPending = (confessionId: string) => {
+    setConfessions(prev => prev.map(c => {
+      if (c.id === confessionId) {
+        return { ...c, status: 'pending' as const, facebookPostId: undefined };
+      }
+      return c;
+    }));
+
+    fetch(`/api/confessions/${confessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'pending', clearFacebook: true })
+    }).catch(err => {
+      console.error("Failed to reset confession status", err);
+    });
+  };
+
   const reportConfession = (confessionId: string) => {
     setConfessions(prev => prev.map(c => {
       if (c.id === confessionId) {
@@ -324,6 +342,7 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         approveConfession,
         rejectConfession,
         deleteConfession,
+        resetConfessionToPending,
         reportConfession,
         clearReports,
         isAdmin,
