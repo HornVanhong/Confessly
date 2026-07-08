@@ -10,6 +10,69 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Confession } from '@/types';
 
+type FacebookApiError = {
+  error?: {
+    message?: string;
+    code?: number;
+  };
+  id?: string;
+  post_id?: string;
+};
+
+type FacebookAccountsResponse = {
+  data?: Array<{
+    id?: string;
+    name?: string;
+    access_token?: string;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
+const isFacebookPublishingPermissionError = (message: string) => {
+  const lowerMessage = message.toLowerCase();
+
+  return (
+    lowerMessage.includes('publish_actions') ||
+    lowerMessage.includes('pages_manage_posts') ||
+    lowerMessage.includes('pages_read_engagement') ||
+    lowerMessage.includes('publishing permission') ||
+    lowerMessage.includes('sufficient administrative permission')
+  );
+};
+
+const formatFacebookPublishError = (message: string) => {
+  if (message.toLowerCase().includes('publish_actions')) {
+    return 'Approved locally. Facebook publishing was disconnected because the saved token uses the deprecated publish_actions permission. Reconnect with a Page access token that has pages_manage_posts and pages_read_engagement.';
+  }
+
+  if (isFacebookPublishingPermissionError(message)) {
+    return 'Approved locally. Facebook publishing was disconnected because the Page token cannot publish to this Page. Reconnect with a Page access token that has pages_manage_posts and pages_read_engagement, created by a Page admin.';
+  }
+
+  return `Approved locally, but Facebook publishing failed: ${message}`;
+};
+
+const getFacebookPublishToken = async (pageId: string, accessToken: string) => {
+  const accountsUrl = new URL('https://graph.facebook.com/v19.0/me/accounts');
+  accountsUrl.searchParams.set('fields', 'id,name,access_token');
+  accountsUrl.searchParams.set('access_token', accessToken);
+
+  const response = await fetch(accountsUrl.toString());
+  const data = await response.json() as FacebookAccountsResponse;
+
+  if (response.ok) {
+    const page = data.data?.find((account) => account.id === pageId);
+
+    if (page?.access_token) {
+      return page.access_token;
+    }
+  }
+
+  return accessToken;
+};
+
 export default function AdminDashboard() {
   const { 
     confessions, approveConfession, rejectConfession, 
@@ -73,7 +136,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Facebook Publishing Logic
   const handleApprove = async (confession: Confession) => {
     if (facebookConfig.isConnected && facebookConfig.accessToken && facebookConfig.pageId) {
       setPublishingId(confession.id);
@@ -81,6 +143,7 @@ export default function AdminDashboard() {
       
       try {
         let postId = '';
+        const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
         const message = `[Confessly #${confession.id.split('-')[1] || 'Secret'}]\nCategory: ${confession.category}\nAlias: @${confession.nickname}\n\n"${confession.content}"\n\n— Share yours on Confessly!`;
 
         if (confession.image) {
@@ -91,18 +154,18 @@ export default function AdminDashboard() {
           const formData = new FormData();
           formData.append('source', blob);
           formData.append('message', message);
-          formData.append('access_token', facebookConfig.accessToken);
+          formData.append('access_token', publishToken);
 
           const response = await fetch(`https://graph.facebook.com/v19.0/${facebookConfig.pageId}/photos`, {
             method: 'POST',
             body: formData,
           });
 
-          const data = await response.json();
+          const data = await response.json() as FacebookApiError;
           if (!response.ok) {
             throw new Error(data.error?.message || 'Facebook Photo API returned an error.');
           }
-          postId = data.post_id || data.id;
+          postId = data.post_id || data.id || '';
         } else {
           // Standard text feed post
           const response = await fetch(`https://graph.facebook.com/v19.0/${facebookConfig.pageId}/feed`, {
@@ -112,18 +175,17 @@ export default function AdminDashboard() {
             },
             body: JSON.stringify({
               message,
-              access_token: facebookConfig.accessToken,
+              access_token: publishToken,
             }),
           });
 
-          const data = await response.json();
+          const data = await response.json() as FacebookApiError;
           if (!response.ok) {
             throw new Error(data.error?.message || 'Facebook Feed API returned an error.');
           }
-          postId = data.id;
+          postId = data.id || '';
         }
 
-        // Successfully published
         approveConfession(confession.id, postId);
         setToast({
           type: 'success',
@@ -133,15 +195,22 @@ export default function AdminDashboard() {
       } catch (err: unknown) {
         console.error("Facebook API error:", err);
         const errorMessage = err instanceof Error ? err.message : 'Verification Error';
+        if (isFacebookPublishingPermissionError(errorMessage)) {
+          updateFacebookConfig({
+            pageId: '',
+            accessToken: '',
+            isConnected: false
+          });
+        }
+        approveConfession(confession.id);
         setToast({
           type: 'error',
-          message: `Facebook Publishing Failed: ${errorMessage}`
+          message: formatFacebookPublishError(errorMessage)
         });
       } finally {
         setPublishingId(null);
       }
     } else {
-      // Local approval fallback
       approveConfession(confession.id);
       setToast({
         type: 'success',
@@ -379,7 +448,7 @@ export default function AdminDashboard() {
                   isConnected: !facebookConfig.isConnected
                 });
               }}
-              disabled={facebookConfig.isConnected ? false : !facebookConfig.accessToken || !facebookConfig.pageId}
+              disabled={facebookConfig.isConnected ? false : !facebookConfig.accessToken.trim() || !facebookConfig.pageId.trim()}
               className={`relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                 facebookConfig.isConnected ? 'bg-[#1877F2]' : 'bg-slate-850'
               }`}
@@ -404,7 +473,7 @@ export default function AdminDashboard() {
                 type="text"
                 value={facebookConfig.pageId}
                 onChange={(e) => updateFacebookConfig({ ...facebookConfig, pageId: e.target.value })}
-                placeholder="e.g. 61591450364822"
+                placeholder="e.g. 1174167879112870"
                 className="bg-slate-950/60 border border-white/5 focus:border-indigo-500/40 rounded-xl p-3 text-xs text-slate-300 focus:outline-none transition-colors"
               />
             </div>
@@ -413,7 +482,7 @@ export default function AdminDashboard() {
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 justify-between w-full">
                 <span className="flex items-center gap-1">
                   <Key className="h-3.5 w-3.5" />
-                  <span>Page Access Token</span>
+                  <span>Access Token</span>
                 </span>
                 <button 
                   onClick={() => setShowToken(!showToken)}
@@ -426,10 +495,13 @@ export default function AdminDashboard() {
                 type={showToken ? 'text' : 'password'}
                 value={facebookConfig.accessToken}
                 onChange={(e) => updateFacebookConfig({ ...facebookConfig, accessToken: e.target.value })}
-                placeholder="Enter your Facebook Page Access Token (EAAG...)"
+                placeholder="Paste User token or Page token (EAAG...)"
                 className="bg-slate-950/60 border border-white/5 focus:border-indigo-500/40 rounded-xl p-3 text-xs text-slate-300 focus:outline-none transition-colors pr-12"
               />
             </div>
+            <p className="md:col-span-2 text-[11px] leading-relaxed text-slate-500 text-left">
+              You can paste the Graph API Explorer User token or the Page token from /me/accounts. The app will use /me/accounts to publish with the matching Page access token.
+            </p>
           </div>
         ) : (
           <div className="text-xs text-slate-400 font-light flex items-center gap-2 text-left">

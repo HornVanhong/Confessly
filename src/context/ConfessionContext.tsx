@@ -9,6 +9,14 @@ export interface FacebookConfig {
   isConnected: boolean;
 }
 
+const DEFAULT_FACEBOOK_CONFIG: FacebookConfig = {
+  pageId: '',
+  accessToken: '',
+  isConnected: false
+};
+
+const LEGACY_DEFAULT_FACEBOOK_PAGE_ID = '1174167879112870';
+
 interface ConfessionContextType {
   confessions: Confession[];
   addConfession: (content: string, category: ConfessionCategory, nickname: string, isPublic: boolean, image?: string) => Confession;
@@ -30,11 +38,7 @@ const ConfessionContext = createContext<ConfessionContextType | undefined>(undef
 export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [isAdmin, setIsAdminState] = useState(false);
-  const [facebookConfig, setFacebookConfig] = useState<FacebookConfig>({
-    pageId: '1174167879112870',
-    accessToken: 'EAAUDQtSrcVABRwZBu7Iz3m9qCQpYooy52mnpQB0dwF0rFtqrA0QwKkSjHp2IZALhPU84NXy2aOlQ96dMDvfZB5MAntxewZBt71RhTMHCOMiqEZCJ4ZAsIZCnTkl7ZA7QQpbRVOJBLjz843ZBZCkqU8t4zlZCvL14Yjcqr51W8EZAq4vd0H9yc3HUhPlFXYaBSxdEpu7u1XXxv3c4oT48ZBbccPUX5Y8FocU1FGQ0fCUxiB3PtYBgZD',
-    isConnected: true
-  });
+  const [facebookConfig, setFacebookConfig] = useState<FacebookConfig>(DEFAULT_FACEBOOK_CONFIG);
 
   // Load initial data on mount
   useEffect(() => {
@@ -65,35 +69,31 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const storedFB = localStorage.getItem('confessly_facebook_config');
     if (storedFB) {
       try {
-        const parsed = JSON.parse(storedFB);
-        // Force upgrade if it contains the old placeholder ID or is missing the access token
-        if (parsed.pageId === '61591450364822' || !parsed.accessToken) {
-          const newDefault = {
-            pageId: '1174167879112870',
-            accessToken: 'EAAUDQtSrcVABRwZBu7Iz3m9qCQpYooy52mnpQB0dwF0rFtqrA0QwKkSjHp2IZALhPU84NXy2aOlQ96dMDvfZB5MAntxewZBt71RhTMHCOMiqEZCJ4ZAsIZCnTkl7ZA7QQpbRVOJBLjz843ZBZCkqU8t4zlZCvL14Yjcqr51W8EZAq4vd0H9yc3HUhPlFXYaBSxdEpu7u1XXxv3c4oT48ZBbccPUX5Y8FocU1FGQ0fCUxiB3PtYBgZD',
-            isConnected: true
-          };
-          localStorage.setItem('confessly_facebook_config', JSON.stringify(newDefault));
+        const parsed = JSON.parse(storedFB) as Partial<FacebookConfig>;
+        const storedConfig: FacebookConfig = {
+          pageId: parsed.pageId || '',
+          accessToken: parsed.accessToken || '',
+          isConnected: Boolean(parsed.isConnected && parsed.pageId && parsed.accessToken)
+        };
+
+        if (storedConfig.isConnected && storedConfig.pageId === LEGACY_DEFAULT_FACEBOOK_PAGE_ID) {
+          localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
           setTimeout(() => {
-            setFacebookConfig(newDefault);
+            setFacebookConfig(DEFAULT_FACEBOOK_CONFIG);
           }, 0);
         } else {
           setTimeout(() => {
-            setFacebookConfig(parsed);
+            setFacebookConfig(storedConfig);
           }, 0);
         }
       } catch (error) {
         console.error("Failed to parse facebook config", error);
+        localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
       }
     } else {
-      const newDefault = {
-        pageId: '1174167879112870',
-        accessToken: 'EAAUDQtSrcVABRwZBu7Iz3m9qCQpYooy52mnpQB0dwF0rFtqrA0QwKkSjHp2IZALhPU84NXy2aOlQ96dMDvfZB5MAntxewZBt71RhTMHCOMiqEZCJ4ZAsIZCnTkl7ZA7QQpbRVOJBLjz843ZBZCkqU8t4zlZCvL14Yjcqr51W8EZAq4vd0H9yc3HUhPlFXYaBSxdEpu7u1XXxv3c4oT48ZBbccPUX5Y8FocU1FGQ0fCUxiB3PtYBgZD',
-        isConnected: true
-      };
-      localStorage.setItem('confessly_facebook_config', JSON.stringify(newDefault));
+      localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
       setTimeout(() => {
-        setFacebookConfig(newDefault);
+        setFacebookConfig(DEFAULT_FACEBOOK_CONFIG);
       }, 0);
     }
   }, []);
@@ -108,8 +108,13 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const updateFacebookConfig = (config: FacebookConfig) => {
-    setFacebookConfig(config);
-    localStorage.setItem('confessly_facebook_config', JSON.stringify(config));
+    const nextConfig = {
+      pageId: config.pageId.trim(),
+      accessToken: config.accessToken.trim(),
+      isConnected: Boolean(config.isConnected && config.pageId.trim() && config.accessToken.trim())
+    };
+    setFacebookConfig(nextConfig);
+    localStorage.setItem('confessly_facebook_config', JSON.stringify(nextConfig));
   };
 
 
