@@ -231,7 +231,8 @@ export default function AdminDashboard() {
         setPublishingId(confession.id);
         setToast(null);
         try {
-          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${facebookConfig.accessToken}`, {
+          const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
+          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
             method: 'DELETE'
           });
           const data = await response.json();
@@ -272,7 +273,8 @@ export default function AdminDashboard() {
         setPublishingId(confession.id);
         setToast(null);
         try {
-          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${facebookConfig.accessToken}`, {
+          const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
+          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
             method: 'DELETE'
           });
           const data = await response.json();
