@@ -144,7 +144,8 @@ export default function AdminDashboard() {
       try {
         let postId = '';
         const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
-        const message = `[Confessly #${confession.id.split('-')[1] || 'Secret'}]\nCategory: ${confession.category}\nAlias: @${confession.nickname}\n\n"${confession.content}"\n\n— Share yours on Confessly!`;
+        const shortId = confession.id.split('-')[1]?.slice(-6) || 'Secret';
+        const message = `💜 Confessly Secret #${shortId} 💜\n\n🏷️ Category: [${confession.category}]\n👤 Alias: @${confession.nickname}\n\n"${confession.content}"\n\n━━━━━━━━━━━━━━━━━━━━━\n👉 https://confessly-pink.vercel.app`;
 
         if (confession.image) {
           // Photo post requires converting Base64 data URL to binary blob
