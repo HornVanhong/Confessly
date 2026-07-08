@@ -32,7 +32,7 @@ export const Navbar = () => {
 
   const startPress = () => {
     pressTimerRef.current = setTimeout(() => {
-      window.location.href = '/moderator';
+      window.location.href = '/moderator?login=true';
     }, 1500); // Hold for 1.5 seconds to enter admin
   };
 
@@ -49,13 +49,14 @@ export const Navbar = () => {
         <div 
           onClick={(e) => {
             if (e.detail === 3) {
-              window.location.href = '/moderator';
+              window.location.href = '/moderator?login=true';
             }
           }}
           onTouchStart={startPress}
           onTouchEnd={endPress}
           onTouchMove={endPress}
-          className="flex items-center gap-2 cursor-pointer select-none"
+          onContextMenu={(e) => e.preventDefault()}
+          className="flex items-center gap-2 cursor-pointer select-none [webkit-touch-callout:none]"
         >
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-2 rounded-xl shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-300">
