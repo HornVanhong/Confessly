@@ -268,32 +268,30 @@ export default function AdminDashboard() {
   };
 
   const handleMoveToPending = async (confession: Confession) => {
-    if (confirm("Move this confession back to Pending Review? (If posted to Facebook, it will be removed from your Page)")) {
-      if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
-        setPublishingId(confession.id);
-        setToast(null);
-        try {
-          const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
-          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
-            method: 'DELETE'
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            console.warn("Facebook API warnings during removal:", data.error?.message);
-          }
-        } catch (err: unknown) {
-          console.error("Facebook delete error during status reset:", err);
-        } finally {
-          setPublishingId(null);
+    if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
+      setPublishingId(confession.id);
+      setToast(null);
+      try {
+        const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
+        const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          console.warn("Facebook API warnings during removal:", data.error?.message);
         }
+      } catch (err: unknown) {
+        console.error("Facebook delete error during status reset:", err);
+      } finally {
+        setPublishingId(null);
       }
-      resetConfessionToPending(confession.id);
-      setToast({
-        type: 'success',
-        message: 'Moved back to Pending Review queue!'
-      });
-      setTimeout(() => setToast(null), 4000);
     }
+    resetConfessionToPending(confession.id);
+    setToast({
+      type: 'success',
+      message: 'Moved back to Pending Review queue!'
+    });
+    setTimeout(() => setToast(null), 4000);
   };
 
   if (!isAdmin) {
