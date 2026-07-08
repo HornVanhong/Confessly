@@ -88,6 +88,15 @@ export default function AdminDashboard() {
   const [showToken, setShowToken] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string; link?: string } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
+  } | null>(null);
 
   // Compute Stats
   const stats = useMemo(() => {
@@ -225,49 +234,61 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDelete = async (confession: Confession) => {
-    if (confirm("Are you sure you want to permanently delete this confession?")) {
-      if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
-        setPublishingId(confession.id);
-        setToast(null);
-        try {
-          const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
-          const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
-            method: 'DELETE'
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            console.warn("Facebook API warnings during deletion:", data.error?.message);
-          }
-          deleteConfession(confession.id);
-          setToast({
-            type: 'success',
-            message: 'Confession deleted locally and successfully removed from Facebook Page!'
-          });
-          setTimeout(() => setToast(null), 4000);
-        } catch (err: unknown) {
-          console.error("Facebook delete error:", err);
-          const errorMessage = err instanceof Error ? err.message : 'Error';
-          deleteConfession(confession.id);
-          setToast({
-            type: 'error',
-            message: `Locally deleted, but failed to remove from Facebook Page: ${errorMessage}`
-          });
-        } finally {
-          setPublishingId(null);
+  const executeDelete = async (confession: Confession) => {
+    if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
+      setPublishingId(confession.id);
+      setToast(null);
+      try {
+        const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
+        const response = await fetch(`https://graph.facebook.com/v19.0/${confession.facebookPostId}?access_token=${publishToken}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          console.warn("Facebook API warnings during deletion:", data.error?.message);
         }
-      } else {
         deleteConfession(confession.id);
         setToast({
           type: 'success',
-          message: 'Confession deleted locally!'
+          message: 'Confession deleted locally and successfully removed from Facebook Page!'
         });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), 4000);
+      } catch (err: unknown) {
+        console.error("Facebook delete error:", err);
+        const errorMessage = err instanceof Error ? err.message : 'Error';
+        deleteConfession(confession.id);
+        setToast({
+          type: 'error',
+          message: `Locally deleted, but failed to remove from Facebook Page: ${errorMessage}`
+        });
+      } finally {
+        setPublishingId(null);
       }
+    } else {
+      deleteConfession(confession.id);
+      setToast({
+        type: 'success',
+        message: 'Confession deleted locally!'
+      });
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
-  const handleMoveToPending = async (confession: Confession) => {
+  const handleDelete = (confession: Confession) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Confession?',
+      message: 'Are you sure you want to permanently delete this confession from the system? This action cannot be undone.',
+      confirmText: 'Delete Permanently',
+      isDestructive: true,
+      onConfirm: () => {
+        executeDelete(confession);
+        setConfirmModal(null);
+      }
+    });
+  };
+
+  const executeMoveToPending = async (confession: Confession) => {
     if (facebookConfig.isConnected && facebookConfig.accessToken && confession.facebookPostId) {
       setPublishingId(confession.id);
       setToast(null);
@@ -292,6 +313,20 @@ export default function AdminDashboard() {
       message: 'Moved back to Pending Review queue!'
     });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleMoveToPending = (confession: Confession) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Move to Pending?',
+      message: 'Are you sure you want to move this confession back to Pending Review? If it was published to Facebook, it will be automatically removed from your Page.',
+      confirmText: 'Move to Pending',
+      isDestructive: false,
+      onConfirm: () => {
+        executeMoveToPending(confession);
+        setConfirmModal(null);
+      }
+    });
   };
 
   if (!isAdmin) {
@@ -855,6 +890,74 @@ export default function AdminDashboard() {
         </div>
 
       </div>
+
+      {/* Premium Custom Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal(null)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
+            
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md glass border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-5 text-left z-10"
+            >
+              {/* Icon & Title */}
+              <div className="flex gap-4 items-start">
+                <div className={`p-3 rounded-2xl w-fit ${
+                  confirmModal.isDestructive 
+                    ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400' 
+                    : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                }`}>
+                  {confirmModal.isDestructive ? (
+                    <Trash2 className="h-6 w-6" />
+                  ) : (
+                    <RefreshCw className="h-6 w-6 animate-spin-slow" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-lg font-bold text-white leading-none">
+                    {confirmModal.title}
+                  </h3>
+                  <p className="text-slate-400 text-xs md:text-sm font-light leading-relaxed mt-1">
+                    {confirmModal.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 border-t border-white/5 pt-4 mt-1">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  {confirmModal.cancelText || 'Cancel'}
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className={`px-4 py-2 text-white rounded-xl text-xs font-semibold cursor-pointer transition-all shadow-md ${
+                    confirmModal.isDestructive 
+                      ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:brightness-110' 
+                      : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:brightness-110'
+                  }`}
+                >
+                  {confirmModal.confirmText || 'Confirm'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
