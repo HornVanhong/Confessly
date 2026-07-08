@@ -1,33 +1,22 @@
 import mysql from 'mysql2/promise';
 
-let pool: mysql.Pool;
+// Establish a global connection pool. Node.js processes reuse this pool across requests.
+// Setting connectionLimit to 2 prevents Serverless database connection exhaustion.
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT) || 8889,
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'root',
+  database: process.env.DB_DATABASE || 'confessly',
+  waitForConnections: true,
+  connectionLimit: 2,
+  queueLimit: 0,
+});
+
 let initialized = false;
 
 const initDb = async () => {
   if (initialized) return;
-
-  // First connect without specifying database to create it if missing
-  const tempConnection = await mysql.createConnection({
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: Number(process.env.DB_PORT) || 8889,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'root',
-  });
-
-  await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_DATABASE || 'confessly'}\``);
-  await tempConnection.end();
-
-  // Create connection pool with database selected
-  pool = mysql.createPool({
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: Number(process.env.DB_PORT) || 8889,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'root',
-    database: process.env.DB_DATABASE || 'confessly',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-  });
 
   // Create confessions table
   await pool.query(`
