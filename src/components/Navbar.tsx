@@ -28,35 +28,17 @@ export const Navbar = () => {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  const pressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const startPress = () => {
-    pressTimerRef.current = setTimeout(() => {
-      window.location.href = '/moderator?login=true';
-    }, 1500); // Hold for 1.5 seconds to enter admin
-  };
-
-  const endPress = () => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current);
-    }
-  };
-
   return (
     <nav className="sticky top-0 z-50 w-full glass border-b border-white/5 py-4 px-6 md:px-12 backdrop-blur-md">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo (Triple-click on desktop or 1.5s Hold on mobile enters Moderator Panel) */}
-        <div 
+        {/* Desktop logo */}
+        <div
           onClick={(e) => {
             if (e.detail === 3) {
               window.location.href = '/moderator?login=true';
             }
           }}
-          onTouchStart={startPress}
-          onTouchEnd={endPress}
-          onTouchMove={endPress}
-          onContextMenu={(e) => e.preventDefault()}
-          className="flex items-center gap-2 cursor-pointer select-none [webkit-touch-callout:none]"
+          className="hidden md:flex items-center gap-2 cursor-pointer select-none"
         >
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-2 rounded-xl shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-300">
@@ -67,6 +49,16 @@ export const Navbar = () => {
             </span>
           </Link>
         </div>
+
+        {/* Mobile logo opens the moderator page directly */}
+        <Link href="/moderator" className="md:hidden flex items-center gap-2 group select-none">
+          <div className="bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-2 rounded-xl shadow-lg shadow-indigo-500/25 group-active:scale-95 transition-transform duration-200">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-white">
+            Confessly
+          </span>
+        </Link>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-2">
