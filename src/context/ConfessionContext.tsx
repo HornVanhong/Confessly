@@ -10,12 +10,10 @@ export interface FacebookConfig {
 }
 
 const DEFAULT_FACEBOOK_CONFIG: FacebookConfig = {
-  pageId: '',
+  pageId: '1174167879112870',
   accessToken: '',
   isConnected: false
 };
-
-const LEGACY_DEFAULT_FACEBOOK_PAGE_ID = '1174167879112870';
 
 interface ConfessionContextType {
   confessions: Confession[];
@@ -72,21 +70,13 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         const parsed = JSON.parse(storedFB) as Partial<FacebookConfig>;
         const storedConfig: FacebookConfig = {
-          pageId: parsed.pageId || '',
+          pageId: parsed.pageId || DEFAULT_FACEBOOK_CONFIG.pageId,
           accessToken: parsed.accessToken || '',
-          isConnected: Boolean(parsed.isConnected && parsed.pageId && parsed.accessToken)
+          isConnected: Boolean(parsed.isConnected && (parsed.pageId || DEFAULT_FACEBOOK_CONFIG.pageId) && parsed.accessToken)
         };
-
-        if (storedConfig.isConnected && storedConfig.pageId === LEGACY_DEFAULT_FACEBOOK_PAGE_ID) {
-          localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
-          setTimeout(() => {
-            setFacebookConfig(DEFAULT_FACEBOOK_CONFIG);
-          }, 0);
-        } else {
-          setTimeout(() => {
-            setFacebookConfig(storedConfig);
-          }, 0);
-        }
+        setTimeout(() => {
+          setFacebookConfig(storedConfig);
+        }, 0);
       } catch (error) {
         console.error("Failed to parse facebook config", error);
         localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
@@ -110,9 +100,9 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const updateFacebookConfig = (config: FacebookConfig) => {
     const nextConfig = {
-      pageId: config.pageId.trim(),
+      pageId: config.pageId.trim() || DEFAULT_FACEBOOK_CONFIG.pageId,
       accessToken: config.accessToken.trim(),
-      isConnected: Boolean(config.isConnected && config.pageId.trim() && config.accessToken.trim())
+      isConnected: Boolean(config.isConnected && (config.pageId.trim() || DEFAULT_FACEBOOK_CONFIG.pageId) && config.accessToken.trim())
     };
     setFacebookConfig(nextConfig);
     localStorage.setItem('confessly_facebook_config', JSON.stringify(nextConfig));
