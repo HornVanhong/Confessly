@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
 import { dbQuery } from '@/lib/db';
 
+async function getPageAccessToken(pageId: string, userAccessToken: string): Promise<string> {
+  try {
+    const accountsUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=id,access_token&access_token=${userAccessToken}`;
+    const res = await fetch(accountsUrl);
+    if (res.ok) {
+      const data = await res.json();
+      const page = data.data?.find((account: any) => account.id === pageId);
+      if (page?.access_token) {
+        return page.access_token;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to get page access token on server:', err);
+  }
+  return userAccessToken;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -47,10 +64,13 @@ export async function GET(
       return NextResponse.json(formattedLocalComments);
     }
 
+    // Exchange User Access Token for Page Access Token on server
+    const pageAccessToken = await getPageAccessToken(settings.pageId, settings.accessToken);
+
     // 4. Fetch comments from Facebook Graph API
     let fbComments: any[] = [];
     try {
-      const fbUrl = `https://graph.facebook.com/v19.0/${facebookPostId}/comments?access_token=${settings.accessToken}&fields=id,message,from,created_time`;
+      const fbUrl = `https://graph.facebook.com/v19.0/${facebookPostId}/comments?access_token=${pageAccessToken}&fields=id,message,from,created_time`;
       const res = await fetch(fbUrl, { cache: 'no-store' }); // Disable cache to always get latest comments
       if (res.ok) {
         const data = await res.json();
