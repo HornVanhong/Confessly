@@ -2,7 +2,7 @@
 
 **Confessly** is a safe, privacy-first, and fully moderated anonymous confession platform. Users can release their burdens, share secrets, or confess anonymously without signups or tracking. Approved confessions are published to a public feed, reacted to, commented on, and automatically pushed directly to a configured Facebook Page.
 
-Live Production URL: **[https://confessly-pink.vercel.app](https://confessly-pink.vercel.app)**
+Live Production URL: **[https://confessly-m4nn.vercel.app](https://confessly-m4nn.vercel.app)**
 
 ---
 
