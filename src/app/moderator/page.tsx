@@ -173,7 +173,18 @@ export default function AdminDashboard() {
         let postId = '';
         const publishToken = await getFacebookPublishToken(facebookConfig.pageId, facebookConfig.accessToken);
         const shortId = confession.id.split('-')[1]?.slice(-6) || 'Secret';
-        const message = `💜 Confessly Secret #${shortId} 💜\n\n🏷️ Category: [${confession.category}]\n👤 Alias: @${confession.nickname}\n\n"${confession.content}"\n\n━━━━━━━━━━━━━━━━━━━━━\n👉 https://confessly-m4nn.vercel.app`;
+        const categoryEmojis: Record<string, string> = {
+          Love: '💖',
+          School: '🎒',
+          Family: '🏡',
+          Friendship: '🤝',
+          Regret: '🥺',
+          Secret: '🤫',
+          Funny: '😆',
+          Other: '✨'
+        };
+        const emoji = categoryEmojis[confession.category] || '✨';
+        const message = `🤫 Confessly Secret #${shortId} 🤫\n\n${emoji} Category: [${confession.category}]\n👤 Alias: @${confession.nickname}\n\n💌 Content:\n"${confession.content}"\n\n━━━━━━━━━━━━━━━━━━━━━\n👇 React & Read Comments 👇\n🔗 https://confessly-m4nn.vercel.app/confession/${confession.id}\n\n📌 អាច Confess តាម Link បានណា៖\n✨ https://confessly-m4nn.vercel.app`;
 
         if (confession.image) {
           // Photo post requires converting Base64 data URL to binary blob
