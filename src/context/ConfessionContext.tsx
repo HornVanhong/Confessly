@@ -77,6 +77,15 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setTimeout(() => {
           setFacebookConfig(storedConfig);
         }, 0);
+
+        // Auto-sync configuration to server on mount if connected
+        if (storedConfig.isConnected && storedConfig.accessToken) {
+          fetch('/api/settings/facebook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(storedConfig),
+          }).catch((err) => console.error('Failed to auto-sync Facebook config to server:', err));
+        }
       } catch (error) {
         console.error("Failed to parse facebook config", error);
         localStorage.setItem('confessly_facebook_config', JSON.stringify(DEFAULT_FACEBOOK_CONFIG));
