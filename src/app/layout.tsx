@@ -45,10 +45,15 @@ export default function RootLayout({
                   .
                 </Link>
               </div>
-              <div className="flex items-center gap-1 text-slate-500 text-sm">
-                <span>Made with</span>
-                <Heart className="h-3.5 w-3.5 text-pink-500 fill-pink-500" />
-                <span>by Horn Vanhong.</span>
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-slate-500 text-sm">
+                <Link href="/privacy" className="hover:text-slate-300 transition-colors">
+                  Privacy Policy
+                </Link>
+                <div className="flex items-center gap-1">
+                  <span>Made with</span>
+                  <Heart className="h-3.5 w-3.5 text-pink-500 fill-pink-500" />
+                  <span>by Horn Vanhong.</span>
+                </div>
               </div>
             </div>
           </footer>
