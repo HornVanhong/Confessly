@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 interface ConfessionCardProps {
   confession: Confession;
   isDetailView?: boolean;
+  customCommentCount?: number;
 }
 
 // Category Badge Color Mapping
@@ -35,6 +36,7 @@ const reactionEmojis = {
 export const ConfessionCard: React.FC<ConfessionCardProps> = ({
   confession,
   isDetailView = false,
+  customCommentCount,
 }) => {
   const { addReaction, reportConfession } = useConfessions();
 
@@ -155,7 +157,7 @@ export const ConfessionCard: React.FC<ConfessionCardProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-slate-400 text-xs" title="Comments">
             <MessageSquare className="h-4 w-4" />
-            <span className="font-semibold">{confession.comments.length}</span>
+            <span className="font-semibold">{customCommentCount !== undefined ? customCommentCount : confession.comments.length}</span>
           </div>
 
           {!isDetailView && confession.reportsCount > 0 && (

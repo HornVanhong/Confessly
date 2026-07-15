@@ -132,7 +132,7 @@ export default function ConfessionDetailPage({ params }: PageProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <ConfessionCard confession={confession} isDetailView={true} />
+        <ConfessionCard confession={confession} isDetailView={true} customCommentCount={loadingComments ? confession.comments.length : comments.length} />
       </motion.div>
 
       {/* Comments Section */}
