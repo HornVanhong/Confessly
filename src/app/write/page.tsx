@@ -263,18 +263,12 @@ export default function WritePage() {
                 Your secrets are safe with us. We have received your confession and queued it for moderation. It will show up on the public feed once approved!
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-sm mt-4">
+            <div className="mt-4">
               <button
                 onClick={() => setIsSubmitted(false)}
-                className="w-full bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-semibold py-3 px-6 rounded-xl transition-colors text-sm cursor-pointer"
+                className="bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-semibold py-3 px-8 rounded-xl transition-colors text-sm cursor-pointer"
               >
                 Submit Another
-              </button>
-              <button
-                onClick={() => router.push('/moderator')}
-                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:brightness-110 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all text-sm cursor-pointer"
-              >
-                Go to Moderator to Approve It
               </button>
             </div>
           </motion.div>
