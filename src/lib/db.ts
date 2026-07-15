@@ -51,6 +51,16 @@ const initDb = async () => {
     )
   `);
 
+  // Create facebook_settings table
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS facebook_settings (
+      id VARCHAR(50) PRIMARY KEY,
+      pageId VARCHAR(255) NOT NULL,
+      accessToken TEXT NOT NULL,
+      isConnected TINYINT(1) NOT NULL DEFAULT 0
+    )
+  `);
+
   // Insert seed data if confessions table is empty
   const [rows] = await pool.query('SELECT COUNT(*) as count FROM confessions');
   const count = (rows as mysql.RowDataPacket[])[0]?.count as number || 0;

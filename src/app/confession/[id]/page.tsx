@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, use } from 'react';
+import React, { useState, use, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useConfessions } from '@/context/ConfessionContext';
 import { ConfessionCard } from '@/components/ConfessionCard';
-import { ArrowLeft, Send, MessageSquarePlus, User, CornerDownRight } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquarePlus, User, CornerDownRight, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface PageProps {
@@ -19,9 +19,29 @@ export default function ConfessionDetailPage({ params }: PageProps) {
   const [commentText, setCommentText] = useState('');
   const [commenterName, setCommenterName] = useState('');
   const [error, setError] = useState('');
+  const [comments, setComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(true);
 
   // Find target confession
   const confession = confessions.find((c) => c.id === id);
+
+  const fetchComments = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/confessions/${id}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data);
+      }
+    } catch (err) {
+      console.error('Failed to load comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +57,26 @@ export default function ConfessionDetailPage({ params }: PageProps) {
       return;
     }
 
+    // Optimistically update local comments state
+    const tempId = `temp-${Date.now()}`;
+    const newComment = {
+      id: tempId,
+      content: commentText.trim(),
+      nickname: commenterName.trim() || 'Anonymous',
+      createdAt: new Date().toISOString(),
+      source: 'website'
+    };
+    setComments(prev => [...prev, newComment]);
+
+    // Save in DB
     addComment(id, commentText, commenterName);
     setCommentText('');
     setCommenterName('');
+
+    // Fetch comments again after a brief delay to get saved IDs and sync Facebook comments
+    setTimeout(() => {
+      fetchComments();
+    }, 600);
   };
 
   // Helper for comment time ago
@@ -103,14 +140,19 @@ export default function ConfessionDetailPage({ params }: PageProps) {
         <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-white/5 pb-3">
           <span>Anonymous Discussion</span>
           <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full">
-            {confession.comments.length}
+            {loadingComments ? '...' : comments.length}
           </span>
         </h3>
 
         {/* Comment list */}
-        {confession.comments.length > 0 ? (
+        {loadingComments ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            <p className="text-sm font-light">Loading comments...</p>
+          </div>
+        ) : comments.length > 0 ? (
           <div className="flex flex-col gap-4">
-            {confession.comments.map((comment) => (
+            {comments.map((comment) => (
               <motion.div
                 key={comment.id}
                 initial={{ opacity: 0, x: -5 }}
@@ -122,8 +164,16 @@ export default function ConfessionDetailPage({ params }: PageProps) {
                 </div>
                 <div className="flex-1 flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-300">
+                    <span className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
                       @{comment.nickname}
+                      {comment.source === 'facebook' && (
+                        <span className="flex items-center gap-1 text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 font-medium px-1.5 py-0.5 rounded-md">
+                          <svg className="h-2.5 w-2.5 fill-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.75z" />
+                          </svg>
+                          <span>Facebook</span>
+                        </span>
+                      )}
                     </span>
                     <span className="text-xs text-slate-500">
                       {formatCommentTime(comment.createdAt)}

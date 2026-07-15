@@ -98,7 +98,7 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  const updateFacebookConfig = (config: FacebookConfig) => {
+  const updateFacebookConfig = async (config: FacebookConfig) => {
     const nextConfig = {
       pageId: config.pageId.trim() || DEFAULT_FACEBOOK_CONFIG.pageId,
       accessToken: config.accessToken.trim(),
@@ -106,6 +106,16 @@ export const ConfessionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
     setFacebookConfig(nextConfig);
     localStorage.setItem('confessly_facebook_config', JSON.stringify(nextConfig));
+
+    try {
+      await fetch('/api/settings/facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextConfig)
+      });
+    } catch (err) {
+      console.error('Failed to sync Facebook config with server settings:', err);
+    }
   };
 
 
